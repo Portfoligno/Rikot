@@ -1,4 +1,5 @@
 include(
+    "compiler",
     "runtime",
     "utility"
 )
