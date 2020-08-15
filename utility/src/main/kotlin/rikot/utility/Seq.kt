@@ -39,3 +39,17 @@ tailrec fun <T> Seq<T>.forEach(action: (T) -> Unit): Unit =
         tail().forEach(action)
       }
     }
+
+tailrec fun <T, R> Seq<T>.fold(initial: R, operation: (R, T) -> R): R =
+    when (this) {
+      Seq.Nil -> initial
+      is Seq.Cons -> tail().fold(operation(initial, head), operation)
+    }
+
+fun <T, R> Seq<T>.foldRight(initial: R, operation: (T, () -> R) -> R): R =
+    when (this) {
+      Seq.Nil -> initial
+      is Seq.Cons -> operation(head) {
+        tail().foldRight(initial, operation)
+      }
+    }
