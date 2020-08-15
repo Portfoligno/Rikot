@@ -4,6 +4,10 @@ plugins {
   kotlin("jvm")
 }
 
+tasks.compileKotlin {
+  kotlinOptions.freeCompilerArgs += "-Xinline-classes"
+}
+
 dependencies {
   implementation(kotlin("stdlib"))
   api(project(":runtime"))
