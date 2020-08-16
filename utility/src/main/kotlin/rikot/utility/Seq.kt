@@ -3,10 +3,22 @@ package rikot.utility
 sealed class Seq<out T> {
   abstract fun <R> map(transform: (T) -> R): Seq<R>
 
+  abstract fun filter(predicate: (T) -> Boolean): Seq<T>
+
+  abstract fun filterNot(predicate: (T) -> Boolean): Seq<T>
+
 
   object Nil : Seq<Nothing>() {
     override
     fun <R> map(transform: (Nothing) -> R): Nil =
+        this
+
+    override
+    fun filter(predicate: (Nothing) -> Boolean): Nil =
+        this
+
+    override
+    fun filterNot(predicate: (Nothing) -> Boolean): Nil =
         this
   }
 
@@ -15,6 +27,29 @@ sealed class Seq<out T> {
     fun <R> map(transform: (T) -> R): Cons<R> =
         Cons(transform(head)) {
           tail().map(transform)
+        }
+
+    override
+    fun filter(predicate: (T) -> Boolean): Seq<T> =
+        kotlin.run {
+          tailrec fun <T> Cons<T>.go(predicate: (T) -> Boolean): Seq<T> =
+              when {
+                predicate(head) -> Cons(head) {
+                  tail().filter(predicate)
+                }
+                else -> when (val t = tail()) {
+                  Nil -> Nil
+                  is Cons -> t.go(predicate)
+                }
+              }
+
+          go(predicate)
+        }
+
+    override
+    fun filterNot(predicate: (T) -> Boolean): Seq<T> =
+        filter {
+          !predicate(it)
         }
   }
 }
