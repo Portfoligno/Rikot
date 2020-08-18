@@ -10,7 +10,16 @@ interface Interpolator {
   val outputType: TypeName
   val defaultTargetType: TypeName?
 
+  fun resolveTargetType(variableType: String, a: TypeName, b: TypeName): TypeName =
+      when (a) {
+        b -> a
+        else -> throw IllegalArgumentException(
+            "Variable type '$variableType' has ambiguous target types '$a' and '$b' that are not compatible"
+        )
+      }
+
   operator fun invoke(nodes: Seq<ExpressionNode>): Seq<Pair3<Text, Argument?, TypeName?>>
+
 
   sealed class Argument {
     abstract val value: Any
