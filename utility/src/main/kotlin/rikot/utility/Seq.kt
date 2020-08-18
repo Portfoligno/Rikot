@@ -134,3 +134,14 @@ fun <T, R1, R2> Seq<T>.partitionMap(transform: (T) -> Either<R1, R2>): Pair<Seq<
     map(transform).let { mapped ->
       mapped.mapNotNull { (it as? Either.Left)?.a } to mapped.mapNotNull { (it as? Either.Right)?.b }
     }
+
+fun <T, R, V> Seq<T>.zipAll(other: Seq<R>, thisPadding: T, otherPadding: R, transform: (T, R) -> V): Seq<V> =
+    when (this) {
+      Seq.Nil -> other.map { transform(thisPadding, it) }
+      is Seq.Cons -> when (other) {
+        Seq.Nil -> map { transform(it, otherPadding) }
+        is Seq.Cons -> Seq.Cons(transform(head, other.head)) {
+          tail().zipAll(other.tail(), thisPadding, otherPadding, transform)
+        }
+      }
+    }
