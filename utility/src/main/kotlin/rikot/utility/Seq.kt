@@ -1,11 +1,15 @@
 package rikot.utility
 
+import kotlin.LazyThreadSafetyMode.PUBLICATION
+
 sealed class Seq<out T> {
   abstract fun <R> map(transform: (T) -> R): Seq<R>
 
   abstract fun filter(predicate: (T) -> Boolean): Seq<T>
 
   abstract fun filterNot(predicate: (T) -> Boolean): Seq<T>
+
+  abstract fun asCached(mode: LazyThreadSafetyMode = PUBLICATION): Seq<T>
 
 
   object Nil : Seq<Nothing>() {
@@ -19,6 +23,10 @@ sealed class Seq<out T> {
 
     override
     fun filterNot(predicate: (Nothing) -> Boolean): Nil =
+        this
+
+    override
+    fun asCached(mode: LazyThreadSafetyMode): Nil =
         this
   }
 
@@ -51,6 +59,10 @@ sealed class Seq<out T> {
         filter {
           !predicate(it)
         }
+
+    override
+    fun asCached(mode: LazyThreadSafetyMode): Seq<T> =
+        Cons(head, lazy(mode) { tail().asCached() }::value)
   }
 }
 
