@@ -1,9 +1,12 @@
 package rikot.utility
 
+import arrow.core.Either
 import kotlin.LazyThreadSafetyMode.PUBLICATION
 
 sealed class Seq<out T> {
   abstract fun <R> map(transform: (T) -> R): Seq<R>
+
+  abstract fun <R> mapNotNull(transform: (T) -> R?): Seq<R>
 
   abstract fun filter(predicate: (T) -> Boolean): Seq<T>
 
@@ -15,6 +18,10 @@ sealed class Seq<out T> {
   object Nil : Seq<Nothing>() {
     override
     fun <R> map(transform: (Nothing) -> R): Nil =
+        this
+
+    override
+    fun <R> mapNotNull(transform: (Nothing) -> R?): Nil =
         this
 
     override
@@ -35,6 +42,23 @@ sealed class Seq<out T> {
     fun <R> map(transform: (T) -> R): Cons<R> =
         Cons(transform(head)) {
           tail().map(transform)
+        }
+
+    override
+    fun <R> mapNotNull(transform: (T) -> R?): Seq<R> =
+        kotlin.run {
+          tailrec fun <T> Cons<T>.go(transform: (T) -> R?): Seq<R> =
+              when (val h = transform(head)) {
+                null -> when (val t = tail()) {
+                  Nil -> Nil
+                  is Cons -> t.go(transform)
+                }
+                else -> Cons(h) {
+                  tail().mapNotNull(transform)
+                }
+              }
+
+          go(transform)
         }
 
     override
@@ -99,4 +123,14 @@ fun <T, R> Seq<T>.foldRight(initial: R, operation: (T, () -> R) -> R): R =
       is Seq.Cons -> operation(head) {
         tail().foldRight(initial, operation)
       }
+    }
+
+
+/**
+ * Split this [Seq] into a pair of [Seq]s by applying the supplied function.
+ * [Seq.asCached] could be used together to avoid repeated processing.
+ */
+fun <T, R1, R2> Seq<T>.partitionMap(transform: (T) -> Either<R1, R2>): Pair<Seq<R1>, Seq<R2>> =
+    map(transform).let { mapped ->
+      mapped.mapNotNull { (it as? Either.Left)?.a } to mapped.mapNotNull { (it as? Either.Right)?.b }
     }
