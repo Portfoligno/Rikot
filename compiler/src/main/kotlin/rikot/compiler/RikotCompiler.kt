@@ -4,6 +4,9 @@ import arrow.core.Left
 import arrow.core.Right
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.KModifier.*
+import rikot.compiler.ExpressionNode.Variable
+import rikot.compiler.PlaceholderNode.PlaceholderVariable
+import rikot.compiler.PlaceholderNode.PlaceholderVariableType
 import rikot.compiler.text.TextInterpolator
 import rikot.compiler.utility.escapeIfNecessary
 import rikot.compiler.utility.readTextDetectingBom
@@ -48,7 +51,7 @@ class RikotCompiler private constructor(private val formats: Map<String, Interpo
             .asCached()
             .partitionMap {
               when (it) {
-                is Node.PlaceholderVariable -> Left(it)
+                is PlaceholderNode -> Left(it)
                 is ExpressionNode -> Right(it)
               }
             }
@@ -63,7 +66,7 @@ class RikotCompiler private constructor(private val formats: Map<String, Interpo
               val triples = interpolator(expressions).asCached()
 
               val (types: Map<String, String>, targetTypes: Map<String, TypeName>) = expressions
-                  .mapNotNull { it as? ExpressionNode.Variable }
+                  .mapNotNull { it as? Variable }
                   .zipAll(triples.mapNotNull { it.second }, null, null) { variable, target ->
                     checkNotNull(variable) { "Excessive target type emitted from the interpolator" }
                     checkNotNull(target) { "Insufficient target type emitted from the interpolator" }
@@ -81,8 +84,14 @@ class RikotCompiler private constructor(private val formats: Map<String, Interpo
                   .let { maps ->
                     placeholders
                         .fold(maps) { (names, types), variable ->
-                          names.mergeVariable(variable.name, variable.type)
-                          types.getOrPut(variable.type) { defaultTargetType }
+                          when (variable) {
+                            is PlaceholderVariable -> {
+                              names.mergeVariable(variable.name, variable.type)
+                              types.getOrPut(variable.type) { defaultTargetType }
+                            }
+                            is PlaceholderVariableType ->
+                              types.getOrPut(variable.type) { defaultTargetType }
+                          }
                           names to types
                         }
                   }

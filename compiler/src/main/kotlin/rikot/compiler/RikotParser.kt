@@ -1,6 +1,9 @@
 @file:Suppress("ObjectPropertyName", "NonAsciiCharacters")
 package rikot.compiler
 
+import arrow.core.Either
+import arrow.core.Either.Left
+import arrow.core.Either.Right
 import rikot.compiler.State.*
 import rikot.compiler.utility.*
 import rikot.utility.Seq
@@ -21,9 +24,14 @@ sealed class State {
   // `inlining` is null if the construct is hyphen based
   data class VariableName(val offset: Int, val inlining: Unit?) : State()
   data class VariableNameWithSpace(val offset: Int, val variableName: VariableName) : State()
-  data class VariableNameWithNewLine(val name: String, val inlining: Unit?) : State()
+  data class VariableNameWithNewLine(val name: Either<String?, String>) : State() {
+    constructor(name: String, inlining: Unit?) : this(inlining?.let { Right(name) } ?: Left(name))
+  }
 
-  data class Colon(val name: String, val inlining: Unit?) : State()
+  data class Colon(val name: Either<String?, String>) : State() {
+    constructor(name: String, inlining: Unit?) : this(inlining?.let { Right(name) } ?: Left(name))
+    val inlining get() = name.fold({ null }) { Unit }
+  }
 
   data class VariableType(val offset: Int, val colon: Colon) : State()
   data class VariableTypeWithSpace(val offset: Int, val variableType: VariableType) : State()
@@ -57,6 +65,7 @@ private val `⁚` by CodePoint.replacing('⁚' to ':')
 private val `⁅` by CodePoint.replacing('⁅' to '[')
 private val `⁆` by CodePoint.replacing('⁆' to ']')
 private val `#` by CodePoint
+private val `_` by CodePoint
 
 private val `'` by CodePoint
 private val `&` by CodePoint
@@ -71,9 +80,12 @@ fun CodePoint.isValidIdentifier() =
 
 private
 fun VariableType.toNode(type: String) =
-    when (colon.inlining) {
-      null -> Node.PlaceholderVariable(colon.name, type)
-      else -> ExpressionNode.Variable(colon.name, type)
+    when (colon.name) {
+      is Left -> when (val s = colon.name.a) {
+        null -> PlaceholderNode.PlaceholderVariableType(type)
+        else -> PlaceholderNode.PlaceholderVariable(s, type)
+      }
+      is Right -> ExpressionNode.Variable(colon.name.b, type)
     }
 
 private
@@ -236,7 +248,7 @@ tailrec fun String.parse(
     is VariableNameWithNewLine -> when (c) {
       null -> throw failing("Expected '$`⁚`', but the input has no more characters")
       ` `, `⧹r`, `⧹n` -> parse(seq, state)
-      `⁚` -> parse(seq, Colon(state.name, state.inlining))
+      `⁚` -> parse(seq, Colon(state.name))
       else -> throw offset.failing("Expected '$`⁚`', but '$c' was found")
     }
     is Colon -> when (c) {
@@ -297,6 +309,7 @@ tailrec fun String.parse(
     DoubleHyphenWithBrace -> when (c) {
       null -> throw failing("Expected a variable name, but the input has no more characters")
       ` `, `⧹r`, `⧹n` -> parse(seq, DoubleHyphenWithBrace)
+      `_` -> parse(seq, VariableNameWithNewLine(Left(null)))
       else -> when {
         c.isValidIdentifier() -> parse(seq, VariableName(offset, null))
         else -> throw offset.failing("'$c'", "is not a valid identifier for a variable name")

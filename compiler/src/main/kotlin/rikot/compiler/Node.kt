@@ -2,11 +2,17 @@ package rikot.compiler
 
 import com.squareup.kotlinpoet.TypeName
 
-sealed class Node {
+sealed class Node
+
+sealed class PlaceholderNode : Node() {
   data class PlaceholderVariable(
       val name: String,
       val type: String
-  ) : Node()
+  ) : PlaceholderNode()
+
+  data class PlaceholderVariableType(
+      val type: String
+  ) : PlaceholderNode()
 }
 
 sealed class ExpressionNode : Node() {
@@ -36,7 +42,8 @@ fun Node.escapeSpaces(): Node =
       is ExpressionNode.Literal -> ExpressionNode.Literal(value.escapeSpaces())
       is ExpressionNode.InlineLiteral -> ExpressionNode.Literal(value.escapeSpaces())
       is ExpressionNode.Variable -> ExpressionNode.Variable(name.escapeSpaces(), type.escapeSpaces())
-      is Node.PlaceholderVariable -> Node.PlaceholderVariable(name.escapeSpaces(), type.escapeSpaces())
+      is PlaceholderNode.PlaceholderVariable -> PlaceholderNode.PlaceholderVariable(name.escapeSpaces(), type.escapeSpaces())
+      is PlaceholderNode.PlaceholderVariableType -> PlaceholderNode.PlaceholderVariableType(type.escapeSpaces())
     }
 
 internal
