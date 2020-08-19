@@ -145,3 +145,7 @@ fun <T, R, V> Seq<T>.zipAll(other: Seq<R>, thisPadding: T, otherPadding: R, tran
         }
       }
     }
+
+
+fun <T> Seq<T>.toList(): List<T> =
+    fold(mutableListOf()) { a, b -> a += b; a }
