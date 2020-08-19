@@ -23,7 +23,7 @@ fun MutableMap<String, String>.mergeVariable(variableName: String, variableType:
       when (a) {
         b -> a
         else -> throw IllegalArgumentException(
-            "Variable '$variableName' has ambiguous types '$a' and '$b'"
+            "Variable '${variableName.unescapeSpaces()}' has ambiguous types '${a.unescapeSpaces()}' and '${b.unescapeSpaces()}'"
         )
       }
     }

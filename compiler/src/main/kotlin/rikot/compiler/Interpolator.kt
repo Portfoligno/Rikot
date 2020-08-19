@@ -14,7 +14,7 @@ interface Interpolator {
       when (a) {
         b -> a
         else -> throw IllegalArgumentException(
-            "Variable type '$variableType' has ambiguous target types '$a' and '$b' that are not compatible"
+            "Variable type '${variableType.unescapeSpaces()}' has ambiguous target types '${a.unescapeSpaces()}' and '${b.unescapeSpaces()}' that are not compatible"
         )
       }
 

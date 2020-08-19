@@ -114,6 +114,10 @@ object RikotParser {
           .filterNot {
             (it as? ExpressionNode.Literal)?.value == ""
           }
+          .map {
+            // Temporary workaround
+            it.escapeSpaces()
+          }
 }
 
 // Mutes the 'Recursive call is not a tail call' warning

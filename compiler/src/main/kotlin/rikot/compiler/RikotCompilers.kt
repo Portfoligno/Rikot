@@ -50,4 +50,12 @@ fun RikotCompiler.generateAll(sourceRoot: File, destination: File) {
             .build()
             .writeTo(destination)
       }
+
+  // Temporary workaround
+  destination
+      .walkTopDown()
+      .filter { it.isFile }
+      .forEach {
+        it.writeText(it.readText().unescapeSpaces())
+      }
 }
